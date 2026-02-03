@@ -11,6 +11,7 @@ type Props = {
   allCompleted: boolean;
   todos: Todo[];
   handleToggleAllButton: (todos: Todo[]) => void;
+  isLoadingTodos: boolean;
 };
 
 export const Header: React.FC<Props> = ({
@@ -22,18 +23,22 @@ export const Header: React.FC<Props> = ({
   allCompleted,
   todos,
   handleToggleAllButton,
+  isLoadingTodos,
 }) => {
   return (
     <header className="todoapp__header">
       {/* this button should have `active` class only if all todos are completed */}
-
-      <button
-        type="button"
-        className={classNames('todoapp__toggle-all', { active: allCompleted })}
-        data-cy="ToggleAllButton"
-        disabled={todos.length === 0}
-        onClick={() => handleToggleAllButton(todos)}
-      />
+      {!isLoadingTodos && todos.length > 0 && (
+        <button
+          type="button"
+          className={classNames('todoapp__toggle-all', {
+            active: allCompleted,
+          })}
+          data-cy="ToggleAllButton"
+          disabled={todos.length === 0}
+          onClick={() => handleToggleAllButton(todos)}
+        />
+      )}
 
       {/* Add a todo on form submit */}
       <form onSubmit={handleSubmitForm}>

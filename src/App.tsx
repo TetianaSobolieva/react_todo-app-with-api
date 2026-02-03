@@ -35,17 +35,22 @@ export const App: React.FC = () => {
   const [error, setError] = useState<ErrorMessage>(ErrorMessage.None);
   const [status, setStatus] = useState<Filter>(Filter.ALL);
   const [title, setTitle] = useState<string>('');
+  const [isLoadingTodos, setIsLoadingTodos] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const focusInput = () => inputRef.current?.focus();
+
   const hasCompletedTodos = todos.some(todo => todo.completed);
+  const filteredTodos = getFilteredTodos(todos, status);
+  const countActiveTodo = todos.filter(element => !element.completed).length;
 
   useEffect(() => {
     getTodos()
       .then(fetchedTodos => {
         setTodos(fetchedTodos);
       })
-      .catch(() => setError(ErrorMessage.Load));
+      .catch(() => setError(ErrorMessage.Load))
+      .finally(() => setIsLoadingTodos(false));
   }, []);
 
   useEffect(() => {
@@ -61,10 +66,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     focusInput();
   }, [tempTodo, inputRef]);
-
-  const filteredTodos = getFilteredTodos(todos, status);
-
-  const countActiveTodo = todos.filter(element => !element.completed).length;
 
   const handleStatusChange = (newStatus: Filter) => {
     setStatus(newStatus);
@@ -168,18 +169,22 @@ export const App: React.FC = () => {
     const areAllCompleted = allTodosCompleted(todosToToggle);
     const newCompletedValue = !areAllCompleted;
 
+    const todosForUpdate = todosToToggle.filter(
+      todo => todo.completed !== newCompletedValue,
+    );
+
     setLoadingIds(current => [
       ...current,
-      ...todosToToggle.map(todo => todo.id),
+      ...todosForUpdate.map(todo => todo.id),
     ]);
 
-    todosToToggle.forEach(todo => {
-      updateTodo({ ...todo, completed: newCompletedValue })
+    todosForUpdate.forEach(todo => {
+      const updatedTodo = { ...todo, completed: newCompletedValue };
+
+      updateTodo(updatedTodo)
         .then(() => {
           setTodos(currentTodos =>
-            currentTodos.map(t =>
-              t.id === todo.id ? { ...t, completed: newCompletedValue } : t,
-            ),
+            currentTodos.map(t => (t.id === todo.id ? updatedTodo : t)),
           );
         })
         .catch(() => {
@@ -193,6 +198,29 @@ export const App: React.FC = () => {
         });
     });
   }
+
+  const handleUpdateTodo = async (updatedTodo: Todo): Promise<boolean> => {
+    setLoadingIds(current => [...current, updatedTodo.id]);
+
+    try {
+      await updateTodo(updatedTodo);
+
+      setTodos(currentTodos =>
+        currentTodos.map(todo =>
+          todo.id === updatedTodo.id ? updatedTodo : todo,
+        ),
+      );
+
+      return true;
+    } catch {
+      setError(ErrorMessage.Update);
+
+      return false;
+    } finally {
+      setLoadingIds(current => current.filter(id => id !== updatedTodo.id));
+      focusInput();
+    }
+  };
 
   return (
     <div className="todoapp">
@@ -208,6 +236,7 @@ export const App: React.FC = () => {
           inputRef={inputRef}
           allCompleted={allTodosCompleted(todos)}
           handleToggleAllButton={handleToggleAllButton}
+          isLoadingTodos={isLoadingTodos}
         />
 
         {(todos.length > 0 || tempTodo) && (
@@ -217,6 +246,7 @@ export const App: React.FC = () => {
             loadingIds={loadingIds}
             handleDelete={handleDelete}
             handleChangeStatus={handleChangeStatus}
+            handleUpdateTodo={handleUpdateTodo}
           />
         )}
 

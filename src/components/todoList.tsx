@@ -8,6 +8,7 @@ type Props = {
   tempTodo: Todo | null;
   handleDelete: (id: number) => void;
   handleChangeStatus: (todo: Todo) => void;
+  handleUpdateTodo: (todo: Todo) => void;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -16,6 +17,7 @@ export const TodoList: React.FC<Props> = ({
   handleDelete,
   tempTodo,
   handleChangeStatus,
+  handleUpdateTodo,
 }) => {
   return (
     <section className="todoapp__main" data-cy="TodoList">
@@ -26,6 +28,7 @@ export const TodoList: React.FC<Props> = ({
           loading={loadingIds.includes(todo.id)}
           onDelete={handleDelete}
           handleChangeStatus={handleChangeStatus}
+          onUpdate={handleUpdateTodo}
         />
       ))}
 
