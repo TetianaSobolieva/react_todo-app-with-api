@@ -10,38 +10,38 @@ import { Todo } from './types/Todo';
 import { Header } from './components/Header';
 import { TodoList } from './components/todoList';
 import { Footer } from './components/Footer';
-import { Error } from './components/Error';
+import { ErrorNotification } from './components/ErrorNotification';
 import { Filter } from './types/Filter';
 import { ErrorMessage } from './types/ErrorMessage';
 
 function getFilteredTodos(todos: Todo[], filterBy: Filter) {
   return todos.filter(todo => {
-    if (filterBy === Filter.ACTIVE) {
-      return !todo.completed;
+    switch (filterBy) {
+      case Filter.Active:
+        return !todo.completed;
+      case Filter.Completed:
+        return todo.completed;
+      case Filter.All:
+      default:
+        return true;
     }
-
-    if (filterBy === Filter.COMPLETED) {
-      return todo.completed;
-    }
-
-    return true;
   });
 }
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [status, setStatus] = useState<Filter>(Filter.All);
+  const [error, setError] = useState<ErrorMessage>(ErrorMessage.None);
+  const [title, setTitle] = useState<string>('');
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [loadingIds, setLoadingIds] = useState<number[]>([]);
-  const [error, setError] = useState<ErrorMessage>(ErrorMessage.None);
-  const [status, setStatus] = useState<Filter>(Filter.ALL);
-  const [title, setTitle] = useState<string>('');
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   const focusInput = () => inputRef.current?.focus();
-
-  const hasCompletedTodos = todos.some(todo => todo.completed);
   const filteredTodos = getFilteredTodos(todos, status);
+  const hasCompletedTodos = todos.some(todo => todo.completed);
   const countActiveTodo = todos.filter(element => !element.completed).length;
 
   useEffect(() => {
@@ -71,8 +71,6 @@ export const App: React.FC = () => {
     setStatus(newStatus);
   };
 
-  // adding new todo
-
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -88,14 +86,12 @@ export const App: React.FC = () => {
       return;
     }
 
-    const temp: Todo = {
+    setTempTodo({
       id: 0,
       userId: USER_ID,
       title: trimmedTitle,
       completed: false,
-    };
-
-    setTempTodo(temp);
+    });
 
     createTodo(trimmedTitle)
       .then(todoFromServer => {
@@ -111,7 +107,6 @@ export const App: React.FC = () => {
       });
   };
 
-  // delete todo
   const handleDelete = (id: number) => {
     setLoadingIds(current => [...current, id]);
 
@@ -148,7 +143,9 @@ export const App: React.FC = () => {
     updateTodo(updatedTodo)
       .then(() => {
         setTodos(currentTodos =>
-          currentTodos.map(t => (t.id === updatedTodo.id ? updatedTodo : t)),
+          currentTodos.map(currentTodo =>
+            currentTodo.id === updatedTodo.id ? updatedTodo : currentTodo,
+          ),
         );
       })
       .catch(() => {
@@ -184,7 +181,9 @@ export const App: React.FC = () => {
       updateTodo(updatedTodo)
         .then(() => {
           setTodos(currentTodos =>
-            currentTodos.map(t => (t.id === todo.id ? updatedTodo : t)),
+            currentTodos.map(currentTodo =>
+              currentTodo.id === todo.id ? updatedTodo : currentTodo,
+            ),
           );
         })
         .catch(() => {
@@ -199,27 +198,28 @@ export const App: React.FC = () => {
     });
   }
 
-  const handleUpdateTodo = async (updatedTodo: Todo): Promise<boolean> => {
+  const handleUpdateTodo = (updatedTodo: Todo): Promise<boolean> => {
     setLoadingIds(current => [...current, updatedTodo.id]);
 
-    try {
-      await updateTodo(updatedTodo);
+    return updateTodo(updatedTodo)
+      .then(() => {
+        setTodos(currentTodos =>
+          currentTodos.map(todo =>
+            todo.id === updatedTodo.id ? updatedTodo : todo,
+          ),
+        );
 
-      setTodos(currentTodos =>
-        currentTodos.map(todo =>
-          todo.id === updatedTodo.id ? updatedTodo : todo,
-        ),
-      );
+        return true;
+      })
+      .catch(() => {
+        setError(ErrorMessage.Update);
 
-      return true;
-    } catch {
-      setError(ErrorMessage.Update);
-
-      return false;
-    } finally {
-      setLoadingIds(current => current.filter(id => id !== updatedTodo.id));
-      focusInput();
-    }
+        return false;
+      })
+      .finally(() => {
+        setLoadingIds(current => current.filter(id => id !== updatedTodo.id));
+        focusInput();
+      });
   };
 
   return (
@@ -261,7 +261,7 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      <Error error={error} clearError={clearError} />
+      <ErrorNotification error={error} clearError={clearError} />
     </div>
   );
 };

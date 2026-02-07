@@ -25,14 +25,20 @@ export const TodoList: React.FC<Props> = ({
         <TodoItem
           key={todo.id}
           todo={todo}
-          loading={loadingIds.includes(todo.id)}
+          isLoading={loadingIds.includes(todo.id)}
           onDelete={handleDelete}
           handleChangeStatus={handleChangeStatus}
           onUpdate={handleUpdateTodo}
         />
       ))}
 
-      {tempTodo && <TodoItem todo={tempTodo} loading />}
+      {tempTodo && (
+        <TodoItem
+          todo={tempTodo}
+          isLoading={true}
+          handleChangeStatus={() => {}}
+        />
+      )}
     </section>
   );
 };

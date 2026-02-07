@@ -4,20 +4,20 @@ import { Todo } from '../types/Todo';
 
 type Props = {
   todo: Todo;
-  loading?: boolean;
+  isLoading?: boolean;
   onDelete?: (id: number) => void;
-  onUpdate?: (todo: Todo) => Promise<boolean>;
+  onUpdate?: (todo: Todo) => void | Promise<boolean>;
   handleChangeStatus: (todo: Todo) => void;
 };
 
 export const TodoItem: React.FC<Props> = ({
   todo,
-  loading = false,
+  isLoading = false,
   onDelete,
   onUpdate,
   handleChangeStatus,
 }) => {
-  const [changeTitle, setChangeTitle] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(todo.title);
 
   async function handleChangeItem() {
@@ -39,8 +39,15 @@ export const TodoItem: React.FC<Props> = ({
       }
     }
 
-    setChangeTitle(false);
+    setIsEditingTitle(false);
   }
+
+  const handleKeyUp = (event: React.KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      setNewTitle(todo.title);
+      setIsEditingTitle(false);
+    }
+  };
 
   return (
     <div
@@ -54,12 +61,12 @@ export const TodoItem: React.FC<Props> = ({
           className="todo__status"
           checked={todo.completed}
           aria-label="Toggle todo status"
-          disabled={loading}
+          disabled={isLoading}
           onChange={() => handleChangeStatus(todo)}
           readOnly
         />
       </label>
-      {changeTitle ? (
+      {isEditingTitle ? (
         <form
           onSubmit={event => {
             event.preventDefault();
@@ -67,12 +74,7 @@ export const TodoItem: React.FC<Props> = ({
           }}
         >
           <input
-            onKeyUp={event => {
-              if (event.key === 'Escape') {
-                setChangeTitle(false);
-                setNewTitle(todo.title);
-              }
-            }}
+            onKeyUp={handleKeyUp}
             onBlur={handleChangeItem}
             onChange={event => setNewTitle(event.target.value)}
             data-cy="TodoTitleField"
@@ -88,17 +90,16 @@ export const TodoItem: React.FC<Props> = ({
           <span
             data-cy="TodoTitle"
             className="todo__title"
-            onDoubleClick={() => setChangeTitle(true)}
+            onDoubleClick={() => setIsEditingTitle(true)}
           >
             {todo.title}
           </span>
 
-          {/* Remove button appears only on hover */}
           <button
             type="button"
             className="todo__remove"
             data-cy="TodoDelete"
-            disabled={loading}
+            disabled={isLoading}
             onClick={() => onDelete?.(todo.id)}
           >
             ×
@@ -106,10 +107,9 @@ export const TodoItem: React.FC<Props> = ({
         </>
       )}
 
-      {/* overlay will cover the todo while it is being deleted or updated */}
       <div
         data-cy="TodoLoader"
-        className={classNames('modal overlay', { 'is-active': loading })}
+        className={classNames('modal overlay', { 'is-active': isLoading })}
       >
         <div className="modal-background has-background-white-ter" />
         <div className="loader" />
